@@ -23,8 +23,8 @@ if host_machine.system() == 'windows'
         add_global_arguments('-DCSRI_NO_EXPORT', language: 'c')
     endif
 
-    sys_nasm = find_program('nasm', required: false)
-    if not sys_nasm.found()
+    if get_option('fallback_nasm') or \
+       not find_program('nasm', required: false).found()
         nasm = subproject('nasm').get_variable('nasm')
         meson.override_find_program('nasm', nasm)
     endif
@@ -127,6 +127,13 @@ if get_option('local_boost') or not boost_dep.found()
     foreach module: (boost_modules + ['regex'])
         boost_dep += boost.get_variable('boost_' + module + '_dep')
     endforeach
+endif
+
+if cc.get_argument_syntax() == 'gcc'
+  # Work around compile error in Boost GIL, can be removed once
+  # https://github.com/boostorg/gil/commit/2956a0e9ef71f5c4f3163c8b8d675679e0fbaaff
+  # is in a boost release that's available everywhere
+  add_project_arguments(cc.get_supported_arguments(['-Wno-missing-template-arg-list-after-template-kw']), language: 'cpp')
 endif
 
 deps += boost_dep
